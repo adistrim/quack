@@ -1,13 +1,20 @@
 {
-  "name": "wrap",
-  "module": "index.ts",
+  "name": "quack-search",
+  "version": "0.0.2",
   "type": "module",
-  "private": true,
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "bin",
+    "scripts"
+  ],
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target bun"
+    "build": "bunx tsc -p tsconfig.build.json && bun build src/index.ts --outdir dist --target bun",
+    "postinstall": "node scripts/postinstall.js"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/node": "^25.0.3"
   },
   "peerDependencies": {
     "typescript": "^5"
