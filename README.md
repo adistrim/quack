@@ -15,7 +15,7 @@ yarn add quack-search
 ### Usage
 
 ```ts
-import { search } from 'quack-search';
+import { search, fetchContent } from 'quack-search';
 console.log(await search('golang', { maxResults: 5 }));
 
 const page = await fetchContent("https://adistrim.in/now");
