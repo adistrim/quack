@@ -1,0 +1,24 @@
+{
+  "name": "quack-search",
+  "version": "0.0.3",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "bunx tsc -p tsconfig.build.json && bun build src/index.ts --outdir dist --target bun"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^25.0.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "optionalDependencies": {
+    "quack-search-darwin-arm64": "0.0.3",
+    "quack-search-darwin-x64": "0.0.3",
+    "quack-search-linux-x64": "0.0.3",
+    "quack-search-windows-x64": "0.0.3"
+  }
+}

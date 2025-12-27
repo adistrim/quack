@@ -1,0 +1,8 @@
+{
+  "name": "quack-search-darwin-x64",
+  "version": "0.0.3",
+  "os": ["darwin"],
+  "cpu": ["x64"],
+  "files": ["bin"],
+  "main": "bin/quack"
+}

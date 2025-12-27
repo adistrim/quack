@@ -4,11 +4,17 @@ import { resolveBinaryPath } from "./binary";
 
 export function runCore(
   payload: CoreRequest,
-  timeoutMs = 30_000,
-  metaUrl = import.meta.url
+  timeoutMs = 30_000
 ): Promise<CoreResponse> {
   return new Promise((resolve, reject) => {
-    const binaryPath = resolveBinaryPath(metaUrl);
+    let binaryPath: string;
+
+    try {
+      binaryPath = resolveBinaryPath();
+    } catch (err) {
+      reject(err);
+      return;
+    }
 
     const proc = spawn(binaryPath, {
       stdio: ["pipe", "pipe", "pipe"],
@@ -22,11 +28,11 @@ export function runCore(
       reject(new Error("core process timed out"));
     }, timeoutMs);
 
-    proc.stdout.on("data", (d) => {
+    proc.stdout.on("data", (d: Buffer) => {
       stdout += d.toString();
     });
 
-    proc.stderr.on("data", (d) => {
+    proc.stderr.on("data", (d: Buffer) => {
       stderr += d.toString();
     });
 
@@ -61,10 +67,6 @@ export function runCore(
         return;
       }
 
-      if (parsed.error) {
-        return reject(new Error(parsed.error));
-      }
-      
       resolve(parsed);
     });
 

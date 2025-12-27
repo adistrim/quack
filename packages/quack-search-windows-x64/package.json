@@ -1,0 +1,8 @@
+{
+  "name": "quack-search-windows-x64",
+  "version": "0.0.3",
+  "os": ["win32"],
+  "cpu": ["x64"],
+  "files": ["bin"],
+  "main": "bin/quack.exe"
+}
