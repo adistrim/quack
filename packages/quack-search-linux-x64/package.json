@@ -1,8 +1,14 @@
 {
   "name": "quack-search-linux-x64",
-  "version": "0.0.3",
-  "os": ["linux"],
-  "cpu": ["x64"],
-  "files": ["bin"],
+  "version": "0.0.4",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin"
+  ],
   "main": "bin/quack"
 }

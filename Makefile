@@ -6,7 +6,40 @@ PKG_DARWIN_X64 := packages/quack-search-darwin-x64
 PKG_LINUX_X64 := packages/quack-search-linux-x64
 PKG_WINDOWS_X64 := packages/quack-search-windows-x64
 
-.PHONY: build build-js build-bins publish clean
+PKGS := \
+	$(PKG_JS) \
+	$(PKG_DARWIN_ARM64) \
+	$(PKG_DARWIN_X64) \
+	$(PKG_LINUX_X64) \
+	$(PKG_WINDOWS_X64)
+
+.PHONY: build build-js build-bins publish clean version check-version
+
+# ---- versioning ----
+
+check-version:
+ifndef VERSION
+	$(error VERSION is required. Usage: make version VERSION=x.y.z)
+endif
+
+version: check-version
+	@echo "Updating all packages to version $(VERSION)"
+	@for pkg in $(PKGS); do \
+		echo "→ $$pkg"; \
+		( \
+			cd $$pkg && \
+			jq '.version = "$(VERSION)"' package.json > package.json.tmp && \
+			mv package.json.tmp package.json \
+		); \
+	done
+
+	@echo "Syncing optionalDependencies in quack-search"
+	@( \
+		cd $(PKG_JS) && \
+		jq '.optionalDependencies |= with_entries(.value = "$(VERSION)")' \
+			package.json > package.json.tmp && \
+		mv package.json.tmp package.json \
+	)
 
 # ---- build ----
 
