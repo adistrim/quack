@@ -1,18 +1,14 @@
 import { runCore } from "../core/runner";
+import type { FetchResult } from "../types/core";
 
 export async function fetchContent(
   url: string,
   timeoutMs?: number
-): Promise<string> {
-  if (!url) {
-    throw new Error("url is required");
-  }
+): Promise<FetchResult> {
+  const res = await runCore({
+    action: "fetch",
+    url,
+  }, timeoutMs);
 
-  return runCore(
-    {
-      action: "fetch",
-      url,
-    },
-    timeoutMs
-  );
+  return res.fetch ?? { success: false, reason: "unknown" };
 }

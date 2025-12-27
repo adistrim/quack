@@ -14,13 +14,20 @@ type SearchRequest struct {
 
 type SearchResult struct {
 	Title    string `json:"title"`
-	Link     string `json:"link"`
+	Url      string `json:"url"`
 	Snippet  string `json:"snippet"`
-	Position int    `json:"position"`
+	Rank     int    `json:"rank"`
+}
+
+type FetchResult struct {
+	Text      string `json:"text,omitempty"`
+	Success   bool   `json:"success"`
+	Reason    string `json:"reason,omitempty"` // "blocked" | "timeout" | "http_error"
+	Truncated bool   `json:"truncated,omitempty"`
 }
 
 type SearchResponse struct {
 	Results []SearchResult `json:"results,omitempty"`
-	Text    string         `json:"text,omitempty"`
+	Fetch   *FetchResult   `json:"fetch,omitempty"`
 	Error   string         `json:"error,omitempty"`
 }

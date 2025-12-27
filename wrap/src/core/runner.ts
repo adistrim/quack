@@ -6,7 +6,7 @@ export function runCore(
   payload: CoreRequest,
   timeoutMs = 30_000,
   metaUrl = import.meta.url
-): Promise<string> {
+): Promise<CoreResponse> {
   return new Promise((resolve, reject) => {
     const binaryPath = resolveBinaryPath(metaUrl);
 
@@ -56,12 +56,16 @@ export function runCore(
         return;
       }
 
-      if (!parsed.text) {
+      if (!parsed.results && !parsed.fetch) {
         reject(new Error("empty response from core"));
         return;
       }
 
-      resolve(parsed.text);
+      if (parsed.error) {
+        return reject(new Error(parsed.error));
+      }
+      
+      resolve(parsed);
     });
 
     proc.stdin.write(JSON.stringify(payload));

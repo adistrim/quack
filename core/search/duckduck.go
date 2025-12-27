@@ -77,9 +77,9 @@ func (s *DuckDuckGo) Search(query string, maxResults int) ([]models.SearchResult
 
 		results = append(results, models.SearchResult{
 			Title:    title,
-			Link:     link,
+			Url:      link,
 			Snippet:  snippet,
-			Position: len(results) + 1,
+			Rank: len(results) + 1,
 		})
 
 		return len(results) < maxResults
