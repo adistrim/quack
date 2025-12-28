@@ -1,10 +1,10 @@
 {
-    "name": "quack",
-    "version": "0.0.3",
-    "workspaces": [
-        "packages/*"
-    ],
-    "scripts": {
-        "build": "bun run --filter quack-search build"
-    }
+  "name": "quack",
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter quack-search build"
+  }
 }

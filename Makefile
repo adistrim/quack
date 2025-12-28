@@ -6,7 +6,9 @@ PKG_DARWIN_X64 := packages/quack-search-darwin-x64
 PKG_LINUX_X64 := packages/quack-search-linux-x64
 PKG_WINDOWS_X64 := packages/quack-search-windows-x64
 
+ROOT_PKG := .
 PKGS := \
+	$(ROOT_PKG) \
 	$(PKG_JS) \
 	$(PKG_DARWIN_ARM64) \
 	$(PKG_DARWIN_X64) \
@@ -40,6 +42,25 @@ version: check-version
 			package.json > package.json.tmp && \
 		mv package.json.tmp package.json \
 	)
+
+# ---- release ----
+
+release: build copy-assets gh-release
+
+copy-assets: build-bins
+	@mkdir -p .release-assets
+	cp $(PKG_DARWIN_ARM64)/bin/quack .release-assets/quack-darwin-arm64
+	cp $(PKG_DARWIN_X64)/bin/quack .release-assets/quack-darwin-x64
+	cp $(PKG_LINUX_X64)/bin/quack .release-assets/quack-linux-x64
+	cp $(PKG_WINDOWS_X64)/bin/quack.exe .release-assets/quack-windows-x64.exe
+
+gh-release: check-version
+	gh release create v$(VERSION) \
+		.release-assets/quack-darwin-arm64 \
+		.release-assets/quack-darwin-x64 \
+		.release-assets/quack-linux-x64 \
+		.release-assets/quack-windows-x64.exe \
+		--title "v$(VERSION)"
 
 # ---- build ----
 
