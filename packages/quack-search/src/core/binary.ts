@@ -10,7 +10,9 @@ export type SupportedPlatform =
   | "darwin-arm64"
   | "darwin-x64"
   | "linux-x64"
-  | "windows-x64";
+  | "linux-arm64"
+  | "windows-x64"
+  | "windows-arm64";
 
 export function getPlatformTarget(): SupportedPlatform {
   const key = `${platform}-${arch}`;
@@ -19,7 +21,9 @@ export function getPlatformTarget(): SupportedPlatform {
     "darwin-arm64": "darwin-arm64",
     "darwin-x64": "darwin-x64",
     "linux-x64": "linux-x64",
+    "linux-arm64": "linux-arm64",
     "win32-x64": "windows-x64",
+    "win32-arm64": "windows-arm64",
   };
 
   const target = supported[key];
@@ -27,7 +31,7 @@ export function getPlatformTarget(): SupportedPlatform {
     throw new QuackBinaryError(
       `Unsupported platform: ${platform} ${arch}`,
       "UNSUPPORTED_PLATFORM",
-      `quack-search supports: darwin-arm64, darwin-x64, linux-x64, windows-x64.\n` +
+      `quack-search supports: darwin-arm64, darwin-x64, linux-x64, linux-arm64, windows-x64, windows-arm64.\n` +
         `You can provide a custom binary via QUACK_BINARY_PATH environment variable.`
     );
   }

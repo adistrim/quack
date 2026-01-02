@@ -1,11 +1,11 @@
 {
-  "name": "quack-search-linux-x64",
+  "name": "quack-search-linux-arm64",
   "version": "0.1.1",
   "os": [
     "linux"
   ],
   "cpu": [
-    "x64"
+    "arm64"
   ],
   "files": [
     "bin"

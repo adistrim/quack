@@ -1,8 +1,8 @@
 {
-  "name": "quack-search-darwin-arm64",
+  "name": "quack-search-windows-arm64",
   "version": "0.1.1",
   "os": [
-    "darwin"
+    "win32"
   ],
   "cpu": [
     "arm64"
@@ -10,5 +10,5 @@
   "files": [
     "bin"
   ],
-  "main": "bin/quack"
+  "main": "bin/quack.exe"
 }

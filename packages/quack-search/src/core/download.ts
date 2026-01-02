@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, chmodSync, createWriteStream, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import { getPlatformTarget, getBinaryName, QuackBinaryError, checkBinaryStatus, resolveBinaryPath, type SupportedPlatform } from "./binary";
+import { getPlatformTarget, getBinaryName, QuackBinaryError, checkBinaryStatus, type SupportedPlatform } from "./binary";
 
 const GITHUB_RELEASE_BASE = "https://github.com/adistrim/quack/releases/download";
 
@@ -225,7 +225,9 @@ function buildDownloadUrl(platform: SupportedPlatform, version: string): string 
     "darwin-arm64": "quack-darwin-arm64",
     "darwin-x64": "quack-darwin-x64",
     "linux-x64": "quack-linux-x64",
+    "linux-arm64": "quack-linux-arm64",
     "windows-x64": "quack-windows-x64.exe",
+    "windows-arm64": "quack-windows-arm64.exe",
   };
 
   const assetName = assetMap[platform];

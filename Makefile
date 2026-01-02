@@ -4,7 +4,9 @@ PKG_JS := packages/quack-search
 PKG_DARWIN_ARM64 := packages/quack-search-darwin-arm64
 PKG_DARWIN_X64 := packages/quack-search-darwin-x64
 PKG_LINUX_X64 := packages/quack-search-linux-x64
+PKG_LINUX_ARM64 := packages/quack-search-linux-arm64
 PKG_WINDOWS_X64 := packages/quack-search-windows-x64
+PKG_WINDOWS_ARM64 := packages/quack-search-windows-arm64
 
 ROOT_PKG := .
 PKGS := \
@@ -13,7 +15,9 @@ PKGS := \
 	$(PKG_DARWIN_ARM64) \
 	$(PKG_DARWIN_X64) \
 	$(PKG_LINUX_X64) \
-	$(PKG_WINDOWS_X64)
+	$(PKG_LINUX_ARM64) \
+	$(PKG_WINDOWS_X64) \
+	$(PKG_WINDOWS_ARM64)
 
 .PHONY: build build-js build-bins publish clean version check-version
 
@@ -52,14 +56,18 @@ copy-assets: build-bins
 	cp $(PKG_DARWIN_ARM64)/bin/quack .release-assets/quack-darwin-arm64
 	cp $(PKG_DARWIN_X64)/bin/quack .release-assets/quack-darwin-x64
 	cp $(PKG_LINUX_X64)/bin/quack .release-assets/quack-linux-x64
+	cp $(PKG_LINUX_ARM64)/bin/quack .release-assets/quack-linux-arm64
 	cp $(PKG_WINDOWS_X64)/bin/quack.exe .release-assets/quack-windows-x64.exe
+	cp $(PKG_WINDOWS_ARM64)/bin/quack.exe .release-assets/quack-windows-arm64.exe
 
 gh-release: check-version
 	gh release create v$(VERSION) \
 		.release-assets/quack-darwin-arm64 \
 		.release-assets/quack-darwin-x64 \
 		.release-assets/quack-linux-x64 \
+		.release-assets/quack-linux-arm64 \
 		.release-assets/quack-windows-x64.exe \
+		.release-assets/quack-windows-arm64.exe \
 		--title "v$(VERSION)"
 
 # ---- build ----
@@ -69,7 +77,7 @@ build: build-js build-bins
 build-js:
 	cd $(PKG_JS) && bun run build
 
-build-bins: darwin-arm64 darwin-x64 linux-x64 windows-x64
+build-bins: darwin-arm64 darwin-x64 linux-x64 linux-arm64 windows-x64 windows-arm64
 
 darwin-arm64:
 	GOOS=darwin GOARCH=arm64 go build -C $(CORE_DIR) -o ../$(PKG_DARWIN_ARM64)/bin/quack
@@ -80,8 +88,14 @@ darwin-x64:
 linux-x64:
 	GOOS=linux GOARCH=amd64 go build -C $(CORE_DIR) -o ../$(PKG_LINUX_X64)/bin/quack
 
+linux-arm64:
+	GOOS=linux GOARCH=arm64 go build -C $(CORE_DIR) -o ../$(PKG_LINUX_ARM64)/bin/quack
+
 windows-x64:
 	GOOS=windows GOARCH=amd64 go build -C $(CORE_DIR) -o ../$(PKG_WINDOWS_X64)/bin/quack.exe
+
+windows-arm64:
+	GOOS=windows GOARCH=arm64 go build -C $(CORE_DIR) -o ../$(PKG_WINDOWS_ARM64)/bin/quack.exe
 
 # ---- publish ----
 
@@ -89,7 +103,9 @@ publish: build
 	cd $(PKG_DARWIN_ARM64) && npm publish
 	cd $(PKG_DARWIN_X64) && npm publish
 	cd $(PKG_LINUX_X64) && npm publish
+	cd $(PKG_LINUX_ARM64) && npm publish
 	cd $(PKG_WINDOWS_X64) && npm publish
+	cd $(PKG_WINDOWS_ARM64) && npm publish
 	cd $(PKG_JS) && npm publish
 
 # ---- clean ----
@@ -98,4 +114,6 @@ clean:
 	rm -f $(PKG_DARWIN_ARM64)/bin/quack
 	rm -f $(PKG_DARWIN_X64)/bin/quack
 	rm -f $(PKG_LINUX_X64)/bin/quack
+	rm -f $(PKG_LINUX_ARM64)/bin/quack
 	rm -f $(PKG_WINDOWS_X64)/bin/quack.exe
+	rm -f $(PKG_WINDOWS_ARM64)/bin/quack.exe
