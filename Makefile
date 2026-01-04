@@ -49,7 +49,7 @@ version: check-version
 
 # ---- release ----
 
-release: build copy-assets gh-release
+release: build copy-assets checksums sign-checksums gh-release
 
 copy-assets: build-bins
 	@mkdir -p .release-assets
@@ -60,14 +60,17 @@ copy-assets: build-bins
 	cp $(PKG_WINDOWS_X64)/bin/quack.exe .release-assets/quack-windows-x64.exe
 	cp $(PKG_WINDOWS_ARM64)/bin/quack.exe .release-assets/quack-windows-arm64.exe
 
+checksums:
+	cd .release-assets && \
+	shasum -a 256 * > checksums.txt
+
+sign-checksums:
+	cd .release-assets && \
+	gpg --armor --detach-sign checksums.txt
+
 gh-release: check-version
 	gh release create v$(VERSION) \
-		.release-assets/quack-darwin-arm64 \
-		.release-assets/quack-darwin-x64 \
-		.release-assets/quack-linux-x64 \
-		.release-assets/quack-linux-arm64 \
-		.release-assets/quack-windows-x64.exe \
-		.release-assets/quack-windows-arm64.exe \
+		.release-assets/* \
 		--title "v$(VERSION)"
 
 # ---- build ----
@@ -99,7 +102,7 @@ windows-arm64:
 
 # ---- publish ----
 
-publish: build
+publish:
 	cd $(PKG_DARWIN_ARM64) && npm publish
 	cd $(PKG_DARWIN_X64) && npm publish
 	cd $(PKG_LINUX_X64) && npm publish

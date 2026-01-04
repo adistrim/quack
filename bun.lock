@@ -7,16 +7,18 @@
     },
     "packages/quack-search": {
       "name": "quack-search",
-      "version": "0.0.3",
+      "version": "0.1.1",
       "devDependencies": {
         "@types/bun": "latest",
         "@types/node": "^25.0.3",
       },
       "optionalDependencies": {
-        "quack-search-darwin-arm64": "0.0.3",
-        "quack-search-darwin-x64": "0.0.3",
-        "quack-search-linux-x64": "0.0.3",
-        "quack-search-windows-x64": "0.0.3",
+        "quack-search-darwin-arm64": "0.1.1",
+        "quack-search-darwin-x64": "0.1.1",
+        "quack-search-linux-arm64": "0.1.1",
+        "quack-search-linux-x64": "0.1.1",
+        "quack-search-windows-arm64": "0.1.1",
+        "quack-search-windows-x64": "0.1.1",
       },
       "peerDependencies": {
         "typescript": "^5",
@@ -24,19 +26,27 @@
     },
     "packages/quack-search-darwin-arm64": {
       "name": "quack-search-darwin-arm64",
-      "version": "0.0.3",
+      "version": "0.1.1",
     },
     "packages/quack-search-darwin-x64": {
       "name": "quack-search-darwin-x64",
-      "version": "0.0.3",
+      "version": "0.1.1",
+    },
+    "packages/quack-search-linux-arm64": {
+      "name": "quack-search-linux-arm64",
+      "version": "0.1.1",
     },
     "packages/quack-search-linux-x64": {
       "name": "quack-search-linux-x64",
-      "version": "0.0.3",
+      "version": "0.1.1",
+    },
+    "packages/quack-search-windows-arm64": {
+      "name": "quack-search-windows-arm64",
+      "version": "0.1.1",
     },
     "packages/quack-search-windows-x64": {
       "name": "quack-search-windows-x64",
-      "version": "0.0.3",
+      "version": "0.1.1",
     },
   },
   "packages": {
@@ -52,7 +62,11 @@
 
     "quack-search-darwin-x64": ["quack-search-darwin-x64@workspace:packages/quack-search-darwin-x64"],
 
+    "quack-search-linux-arm64": ["quack-search-linux-arm64@workspace:packages/quack-search-linux-arm64"],
+
     "quack-search-linux-x64": ["quack-search-linux-x64@workspace:packages/quack-search-linux-x64"],
+
+    "quack-search-windows-arm64": ["quack-search-windows-arm64@workspace:packages/quack-search-windows-arm64"],
 
     "quack-search-windows-x64": ["quack-search-windows-x64@workspace:packages/quack-search-windows-x64"],
 
