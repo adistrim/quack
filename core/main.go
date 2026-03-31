@@ -57,7 +57,7 @@ func main() {
 			break
 		}
 
-		text, err := fetcher.Fetch(req.URL)
+		fetchResult, err := fetcher.Fetch(req.URL)
 		if err != nil {
 			resp.Fetch = &models.FetchResult{
 				Success: false,
@@ -67,8 +67,9 @@ func main() {
 		}
 
 		resp.Fetch = &models.FetchResult{
-			Text:    text,
-			Success: true,
+			Text:      fetchResult.Text,
+			Success:   true,
+			Truncated: fetchResult.Truncated,
 		}
 
 	default:

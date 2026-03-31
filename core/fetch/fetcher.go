@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -43,6 +44,43 @@ type Fetcher struct {
 	client *http.Client
 }
 
+type Result struct {
+	Text      string
+	Truncated bool
+}
+
+type HTTPStatusError struct {
+	StatusCode int
+}
+
+func (e *HTTPStatusError) Error() string {
+	return fmt.Sprintf("http status %d", e.StatusCode)
+}
+
+func (e *HTTPStatusError) Unwrap() error {
+	if e.StatusCode == http.StatusForbidden || e.StatusCode == http.StatusTooManyRequests {
+		return util.ErrBlocked
+	}
+
+	return util.ErrHTTP
+}
+
+func (e *HTTPStatusError) HTTPStatusCode() int {
+	return e.StatusCode
+}
+
+type ContentTypeError struct {
+	ContentType string
+}
+
+func (e *ContentTypeError) Error() string {
+	return fmt.Sprintf("unsupported content type %q", e.ContentType)
+}
+
+func (e *ContentTypeError) Unwrap() error {
+	return util.ErrHTTP
+}
+
 func New() *Fetcher {
 	checkRedirect := func(req *http.Request, via []*http.Request) error {
 		if len(via) >= 10 {
@@ -64,41 +102,46 @@ func New() *Fetcher {
 	}
 }
 
-func (f *Fetcher) Fetch(rawURL string) (string, error) {
+func (f *Fetcher) Fetch(rawURL string) (Result, error) {
 	if err := validateTargetURL(rawURL); err != nil {
-		return "", err
+		return Result{}, err
 	}
 
 	req, err := http.NewRequest("GET", rawURL, nil)
 	if err != nil {
-		return "", err
+		return Result{}, err
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0")
 
 	resp, err := f.client.Do(req)
 	if err != nil {
-		return "", mapRequestError(err)
+		return Result{}, mapRequestError(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("%w: status %d", util.ErrHTTP, resp.StatusCode)
+		return Result{}, &HTTPStatusError{StatusCode: resp.StatusCode}
+	}
+
+	if !isSupportedContentType(resp.Header.Get("Content-Type")) {
+		return Result{}, &ContentTypeError{ContentType: resp.Header.Get("Content-Type")}
 	}
 
 	doc, err := goquery.NewDocumentFromReader(io.LimitReader(resp.Body, maxFetchBodyBytes))
 	if err != nil {
-		return "", err
+		return Result{}, err
 	}
 
 	doc.Find("script, style, nav, header, footer").Remove()
 
 	text := util.CleanWhitespace(doc.Text())
-	if len(text) > maxTextBytes {
-		text = text[:maxTextBytes] + "... [content truncated]"
+	truncatedText, truncated := truncateUTF8ByBytes(text, maxTextBytes)
+	if truncated {
+		truncatedText += "... [content truncated]"
 	}
 
-	return text, nil
+	return Result{Text: truncatedText, Truncated: truncated}, nil
 }
 
 func validateTargetURL(rawURL string) error {
@@ -184,4 +227,45 @@ func mapRequestError(err error) error {
 	}
 
 	return err
+}
+
+func isSupportedContentType(rawContentType string) bool {
+	if rawContentType == "" {
+		return true
+	}
+
+	mediaType, _, err := mime.ParseMediaType(rawContentType)
+	if err != nil {
+		return false
+	}
+
+	if mediaType == "text/html" || mediaType == "application/xhtml+xml" {
+		return true
+	}
+
+	if mediaType == "text/xml" || mediaType == "application/xml" {
+		return true
+	}
+
+	return strings.HasSuffix(mediaType, "+xml")
+}
+
+func truncateUTF8ByBytes(s string, limit int) (string, bool) {
+	if len(s) <= limit {
+		return s, false
+	}
+
+	cut := 0
+	for i := range s {
+		if i > limit {
+			break
+		}
+		cut = i
+	}
+
+	if cut == 0 {
+		return "", true
+	}
+
+	return s[:cut], true
 }
