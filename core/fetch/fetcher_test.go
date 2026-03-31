@@ -3,10 +3,12 @@ package fetch
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -101,6 +103,7 @@ func TestFetchMapsTimeoutErrorClassification(t *testing.T) {
 
 func TestFetchTruncatesLongContent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write([]byte("<html><body>" + repeatA(maxTextBytes+100) + "</body></html>"))
 	}))
 	defer server.Close()
@@ -119,17 +122,131 @@ func TestFetchTruncatesLongContent(t *testing.T) {
 		return http.DefaultTransport.RoundTrip(rewritten)
 	})
 
-	text, err := f.Fetch("http://93.184.216.34/")
+	result, err := f.Fetch("http://93.184.216.34/")
 	if err != nil {
 		t.Fatalf("expected fetch success, got %v", err)
 	}
 
-	if len(text) <= maxTextBytes {
-		t.Fatalf("expected text with truncation suffix, got length %d", len(text))
+	if !result.Truncated {
+		t.Fatal("expected truncated flag to be true")
 	}
 
-	if !strings.HasSuffix(text, "... [content truncated]") {
-		t.Fatalf("expected truncation suffix, got %q", text)
+	if !strings.HasSuffix(result.Text, "... [content truncated]") {
+		t.Fatalf("expected truncation suffix, got %q", result.Text)
+	}
+}
+
+func TestFetchRejectsUnsupportedContentType(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write([]byte("%PDF-1.4"))
+	}))
+	defer server.Close()
+
+	target, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("failed to parse server URL: %v", err)
+	}
+
+	f := New()
+	f.client.Transport = roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		rewritten := req.Clone(req.Context())
+		rewritten.URL.Scheme = target.Scheme
+		rewritten.URL.Host = target.Host
+		rewritten.Host = target.Host
+		return http.DefaultTransport.RoundTrip(rewritten)
+	})
+
+	_, err = f.Fetch("http://93.184.216.34/")
+	if err == nil {
+		t.Fatal("expected content-type error")
+	}
+
+	var ctErr *ContentTypeError
+	if !errors.As(err, &ctErr) {
+		t.Fatalf("expected ContentTypeError, got %T", err)
+	}
+
+	if !errors.Is(err, util.ErrHTTP) {
+		t.Fatalf("expected util.ErrHTTP, got %v", err)
+	}
+}
+
+func TestFetchHTTPStatusErrorType(t *testing.T) {
+	err := &HTTPStatusError{StatusCode: 429}
+	if !errors.Is(err, util.ErrBlocked) {
+		t.Fatalf("expected 429 to unwrap to blocked")
+	}
+
+	err = &HTTPStatusError{StatusCode: 500}
+	if !errors.Is(err, util.ErrHTTP) {
+		t.Fatalf("expected 500 to unwrap to http")
+	}
+}
+
+func TestIsSupportedContentType(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+		expected    bool
+	}{
+		{name: "empty accepted", contentType: "", expected: true},
+		{name: "html accepted", contentType: "text/html; charset=utf-8", expected: true},
+		{name: "xhtml accepted", contentType: "application/xhtml+xml", expected: true},
+		{name: "xml accepted", contentType: "application/xml", expected: true},
+		{name: "svg accepted", contentType: "image/svg+xml", expected: true},
+		{name: "pdf rejected", contentType: "application/pdf", expected: false},
+		{name: "invalid header rejected", contentType: "text/html; charset", expected: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := isSupportedContentType(tc.contentType)
+			if got != tc.expected {
+				t.Fatalf("isSupportedContentType(%q)=%v, want %v", tc.contentType, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestTruncateUTF8ByBytes(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		limit        int
+		expectedText string
+		expectedCut  bool
+	}{
+		{name: "no truncate", input: "hello", limit: 10, expectedText: "hello", expectedCut: false},
+		{name: "ascii truncate", input: "abcdef", limit: 4, expectedText: "abcd", expectedCut: true},
+		{name: "utf8 rune boundary", input: "A世B", limit: 2, expectedText: "A", expectedCut: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			text, cut := truncateUTF8ByBytes(tc.input, tc.limit)
+			if text != tc.expectedText || cut != tc.expectedCut {
+				t.Fatalf("truncateUTF8ByBytes(%q,%d)=(%q,%v), want (%q,%v)", tc.input, tc.limit, text, cut, tc.expectedText, tc.expectedCut)
+			}
+		})
+	}
+}
+
+func TestMapRequestError(t *testing.T) {
+	timeoutErr := mapRequestError(context.DeadlineExceeded)
+	if !errors.Is(timeoutErr, util.ErrTimeout) {
+		t.Fatalf("expected timeout classification, got %v", timeoutErr)
+	}
+
+	plain := errors.New("plain")
+	if !reflect.DeepEqual(mapRequestError(plain), plain) {
+		t.Fatalf("expected plain error passthrough")
+	}
+
+	netTimeout := &fakeTimeoutError{}
+	classified := mapRequestError(fmt.Errorf("wrap: %w", netTimeout))
+	if !errors.Is(classified, util.ErrTimeout) {
+		t.Fatalf("expected wrapped net timeout classification, got %v", classified)
 	}
 }
 
@@ -146,3 +263,9 @@ func repeatA(n int) string {
 	}
 	return string(b)
 }
+
+type fakeTimeoutError struct{}
+
+func (e *fakeTimeoutError) Error() string   { return "timeout" }
+func (e *fakeTimeoutError) Timeout() bool   { return true }
+func (e *fakeTimeoutError) Temporary() bool { return true }
