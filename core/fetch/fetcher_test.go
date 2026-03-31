@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -239,7 +238,7 @@ func TestMapRequestError(t *testing.T) {
 	}
 
 	plain := errors.New("plain")
-	if !reflect.DeepEqual(mapRequestError(plain), plain) {
+	if mapRequestError(plain) != plain {
 		t.Fatalf("expected plain error passthrough")
 	}
 
