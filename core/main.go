@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"os"
 
@@ -20,14 +19,23 @@ func main() {
 		fail(err)
 	}
 
-	if len(input) > maxStdinBytes {
-		writeJSON(models.SearchResponse{Error: "input too large"})
+	resp, err := processRequest(input)
+	if err != nil {
+		fail(err)
 		return
+	}
+
+	writeJSON(resp)
+}
+
+func processRequest(input []byte) (models.SearchResponse, error) {
+	if len(input) > maxStdinBytes {
+		return models.SearchResponse{Error: "input too large"}, nil
 	}
 
 	var req models.SearchRequest
 	if err := json.Unmarshal(input, &req); err != nil {
-		fail(err)
+		return models.SearchResponse{Error: "invalid input"}, nil
 	}
 
 	searcher := search.NewDuckDuckGo()
@@ -76,15 +84,10 @@ func main() {
 		resp.Error = "invalid action"
 	}
 
-	writeJSON(resp)
+	return resp, nil
 }
 
 func fail(err error) {
-	if errors.Is(err, io.EOF) {
-		writeJSON(models.SearchResponse{Error: "invalid input"})
-		return
-	}
-
 	os.Stderr.WriteString(err.Error())
 	os.Exit(1)
 }
