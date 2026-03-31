@@ -2,6 +2,7 @@ package search
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,21 +14,27 @@ import (
 )
 
 const (
-	ddgURL     = "https://html.duckduckgo.com/html"
-	userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+	ddgURL             = "https://html.duckduckgo.com/html"
+	userAgent          = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+	defaultMaxResults  = 10
+	minMaxResults      = 1
+	maxMaxResults      = 50
+	maxSearchBodyBytes = 2 * 1024 * 1024
 )
 
 type DuckDuckGo struct {
-	client  *http.Client
+	client *http.Client
 }
 
 func NewDuckDuckGo() *DuckDuckGo {
 	return &DuckDuckGo{
-		client:  &http.Client{Timeout: 30 * time.Second},
+		client: &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
 func (s *DuckDuckGo) Search(query string, maxResults int) ([]models.SearchResult, error) {
+	maxResults = NormalizeMaxResults(maxResults)
+
 	form := url.Values{}
 	form.Set("q", query)
 	form.Set("b", "")
@@ -51,7 +58,7 @@ func (s *DuckDuckGo) Search(query string, maxResults int) ([]models.SearchResult
 		return nil, fmt.Errorf("duckduckgo status %d", resp.StatusCode)
 	}
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	doc, err := goquery.NewDocumentFromReader(io.LimitReader(resp.Body, maxSearchBodyBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -76,14 +83,30 @@ func (s *DuckDuckGo) Search(query string, maxResults int) ([]models.SearchResult
 		snippet := strings.TrimSpace(sel.Find(".result__snippet").Text())
 
 		results = append(results, models.SearchResult{
-			Title:    title,
-			Url:      link,
-			Snippet:  snippet,
-			Rank: len(results) + 1,
+			Title:   title,
+			Url:     link,
+			Snippet: snippet,
+			Rank:    len(results) + 1,
 		})
 
 		return len(results) < maxResults
 	})
 
 	return results, nil
+}
+
+func NormalizeMaxResults(maxResults int) int {
+	if maxResults == 0 {
+		return defaultMaxResults
+	}
+
+	if maxResults < minMaxResults {
+		return minMaxResults
+	}
+
+	if maxResults > maxMaxResults {
+		return maxMaxResults
+	}
+
+	return maxResults
 }

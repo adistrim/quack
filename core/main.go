@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 
@@ -11,10 +12,17 @@ import (
 	"quack/util"
 )
 
+const maxStdinBytes = 1 * 1024 * 1024
+
 func main() {
-	input, err := io.ReadAll(os.Stdin)
+	input, err := io.ReadAll(io.LimitReader(os.Stdin, maxStdinBytes+1))
 	if err != nil {
 		fail(err)
+	}
+
+	if len(input) > maxStdinBytes {
+		writeJSON(models.SearchResponse{Error: "input too large"})
+		return
 	}
 
 	var req models.SearchRequest
@@ -33,9 +41,8 @@ func main() {
 			resp.Error = "query required"
 			break
 		}
-		if req.MaxResults == 0 {
-			req.MaxResults = 10
-		}
+		req.MaxResults = search.NormalizeMaxResults(req.MaxResults)
+
 		results, err := searcher.Search(req.Query, req.MaxResults)
 		if err != nil {
 			resp.Error = err.Error()
@@ -49,6 +56,7 @@ func main() {
 			resp.Error = "url required"
 			break
 		}
+
 		text, err := fetcher.Fetch(req.URL)
 		if err != nil {
 			resp.Fetch = &models.FetchResult{
@@ -67,11 +75,20 @@ func main() {
 		resp.Error = "invalid action"
 	}
 
-	out, _ := json.Marshal(resp)
-	os.Stdout.Write(out)
+	writeJSON(resp)
 }
 
 func fail(err error) {
+	if errors.Is(err, io.EOF) {
+		writeJSON(models.SearchResponse{Error: "invalid input"})
+		return
+	}
+
 	os.Stderr.WriteString(err.Error())
 	os.Exit(1)
+}
+
+func writeJSON(resp models.SearchResponse) {
+	out, _ := json.Marshal(resp)
+	_, _ = os.Stdout.Write(out)
 }
