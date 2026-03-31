@@ -11,15 +11,31 @@ import (
 	"quack/util"
 )
 
+const maxStdinBytes = 1 * 1024 * 1024
+
 func main() {
-	input, err := io.ReadAll(os.Stdin)
+	input, err := io.ReadAll(io.LimitReader(os.Stdin, maxStdinBytes+1))
 	if err != nil {
 		fail(err)
 	}
 
+	resp, err := processRequest(input)
+	if err != nil {
+		fail(err)
+		return
+	}
+
+	writeJSON(resp)
+}
+
+func processRequest(input []byte) (models.SearchResponse, error) {
+	if len(input) > maxStdinBytes {
+		return models.SearchResponse{Error: "input too large"}, nil
+	}
+
 	var req models.SearchRequest
 	if err := json.Unmarshal(input, &req); err != nil {
-		fail(err)
+		return models.SearchResponse{Error: "invalid input"}, nil
 	}
 
 	searcher := search.NewDuckDuckGo()
@@ -33,9 +49,8 @@ func main() {
 			resp.Error = "query required"
 			break
 		}
-		if req.MaxResults == 0 {
-			req.MaxResults = 10
-		}
+		req.MaxResults = search.NormalizeMaxResults(req.MaxResults)
+
 		results, err := searcher.Search(req.Query, req.MaxResults)
 		if err != nil {
 			resp.Error = err.Error()
@@ -49,7 +64,8 @@ func main() {
 			resp.Error = "url required"
 			break
 		}
-		text, err := fetcher.Fetch(req.URL)
+
+		fetchResult, err := fetcher.Fetch(req.URL)
 		if err != nil {
 			resp.Fetch = &models.FetchResult{
 				Success: false,
@@ -59,19 +75,24 @@ func main() {
 		}
 
 		resp.Fetch = &models.FetchResult{
-			Text:    text,
-			Success: true,
+			Text:      fetchResult.Text,
+			Success:   true,
+			Truncated: fetchResult.Truncated,
 		}
 
 	default:
 		resp.Error = "invalid action"
 	}
 
-	out, _ := json.Marshal(resp)
-	os.Stdout.Write(out)
+	return resp, nil
 }
 
 func fail(err error) {
 	os.Stderr.WriteString(err.Error())
 	os.Exit(1)
+}
+
+func writeJSON(resp models.SearchResponse) {
+	out, _ := json.Marshal(resp)
+	_, _ = os.Stdout.Write(out)
 }

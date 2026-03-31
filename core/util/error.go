@@ -1,15 +1,39 @@
 package util
 
-import "strings"
+import "errors"
+
+type statusCodeError interface {
+	HTTPStatusCode() int
+}
+
+var (
+	ErrBlocked = errors.New("blocked")
+	ErrTimeout = errors.New("timeout")
+	ErrHTTP    = errors.New("http_error")
+)
 
 func ClassifyError(err error) string {
-	msg := err.Error()
-	switch {
-	case strings.Contains(msg, "403"):
+	if errors.Is(err, ErrBlocked) {
 		return "blocked"
-	case strings.Contains(msg, "timeout"):
+	}
+
+	var statusErr statusCodeError
+	if errors.As(err, &statusErr) {
+		switch statusErr.HTTPStatusCode() {
+		case 403, 429:
+			return "blocked"
+		default:
+			return "http_error"
+		}
+	}
+
+	if errors.Is(err, ErrTimeout) {
 		return "timeout"
-	default:
+	}
+
+	if errors.Is(err, ErrHTTP) {
 		return "http_error"
 	}
+
+	return "http_error"
 }
